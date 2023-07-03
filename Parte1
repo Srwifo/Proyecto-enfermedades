@@ -1,0 +1,181 @@
+import gi
+gi.require_version('Gtk', '3.0')
+from gi.repository import Gtk
+import random
+import json
+
+
+class Comunidad:
+    def __init__(self, num_ciudadanos, promedio_conexion_fisica, enfermedad, num_infectados, probabilidad_conexion_fisica, tasa_recuperacion):
+        self.num_ciudadanos = num_ciudadanos 
+        self.promedio_conexion_fisica = promedio_conexion_fisica 
+        self.enfermedad = enfermedad 
+        self.num_infectados = num_infectados 
+        self.probabilidad_conexion_fisica = probabilidad_conexion_fisica
+        self.tasa_recuperacion = tasa_recuperacion
+        self.recuperados = 0
+        self.susceptibles = num_ciudadanos - num_infectados
+        self.dia = 0
+    
+    def __str__(self):
+        return f"Comunidad: {self.num_ciudadanos} ciudadanos, {self.promedio_conexion_fisica} promedio de conexión física, {self.enfermedad} enfermedad, {self.num_infectados} infectados, {self.probabilidad_conexion_fisica} probabilidad de conexión física"
+    
+    def simular_dia(self):
+        self.dia += 1
+        nuevos_infectados = min(int(self.probabilidad_conexion_fisica * self.susceptibles), self.susceptibles)
+        self.num_infectados += nuevos_infectados
+        self.susceptibles -= nuevos_infectados
+        nuevos_recuperados = min(max(1, int(self.tasa_recuperacion * self.num_infectados)), self.num_infectados)
+        self.recuperados += nuevos_recuperados
+        self.num_infectados -= nuevos_recuperados
+        
+        print(f"Día {self.dia}:")
+        print(f"Nuevos infectados: {nuevos_infectados}")
+        print(f"Total infectados: {self.num_infectados}")
+        print(f"Total recuperados: {self.recuperados}")
+        print(f"Total susceptibles: {self.susceptibles}")
+    
+
+
+class Ciudadano:
+    def __init__(self, comunidad, id, nombre, apellido, familia, enfermedad, estado):
+        self.comunidad = comunidad 
+        self.id = id 
+        self.nombre = nombre 
+        self.apellido = apellido 
+        self.familia = familia 
+        self.enfermedad = enfermedad 
+        self.estado = estado 
+        self.recuperado = False
+    
+    def __str__(self):
+        return f"Ciudadano: {self.id}, {self.nombre} {self.apellido}, familia: {self.familia}, enfermedad: {self.enfermedad}, estado: {self.estado}"
+    
+    def infectar(self):
+        if not self.recuperado:
+            self.estado = "infectado"
+            self.enfermedad = "sarampion"
+    
+    def recuperar(self):
+        if not self.recuperado:
+            self.estado = "recuperado"
+            self.enfermedad = "sano"
+            self.recuperado = True
+
+#abre el archivo json
+with open('datosnombres.json', 'r') as f:
+    data = json.load(f)
+    nombres = data['nombres']
+    apellidos = data['apellidos']
+
+num_infectados = random.randint(1, 10)
+total=10000
+comunidad = Comunidad(num_ciudadanos=total, promedio_conexion_fisica=random.uniform(0, 1), enfermedad="sarampion", num_infectados=num_infectados, probabilidad_conexion_fisica=random.uniform(0, 1), tasa_recuperacion=0.1)
+ciudadanos = []
+indices_infectados = random.sample(range(1), num_infectados)
+for i in range(total):
+    if i in indices_infectados:
+        estado = "infectado"
+        enfermedad="sarampion"
+        
+    else:
+        estado = "Sano"
+        enfermedad="Sano"
+    ciudadano = Ciudadano(comunidad=comunidad, id=i, nombre=random.choice(nombres), apellido=random.choice(apellidos), familia=random.randint(0,10), enfermedad=enfermedad, estado=estado)
+    ciudadanos.append(ciudadano)
+
+class MyWindow(Gtk.Window):
+    def __init__(self):
+        Gtk.Window.__init__(self, title="")
+        self.set_default_size(400, 300)
+
+        # Crea el header bar
+        header_bar = Gtk.HeaderBar()
+        header_bar.set_title("Simulador enfermedad")
+        header_bar.set_subtitle("Proyecto")
+        header_bar.set_show_close_button(True)
+
+        menu_button = Gtk.MenuButton()
+        menu_button.set_image(Gtk.Image.new_from_icon_name("open-menu-symbolic", Gtk.IconSize.MENU))
+
+        # Crea el menú 
+        menu = Gtk.Menu()
+        about_item = Gtk.MenuItem(label="Autor")
+        about_item.connect("activate", self.on_about_item_activate)
+        menu.append(about_item)
+        
+        info = Gtk.MenuItem(label="Información ciudadanos")
+        info.connect("activate", self.on_info_item_activate)
+        menu.append(info)
+        
+        simular_dia = Gtk.MenuItem(label="Simular día")
+        simular_dia.connect("activate", self.on_simular_dia_item_activate)
+        menu.append(simular_dia)
+        
+        simular_10_dias= Gtk.MenuItem(label="Simular 10 días")
+        simular_10_dias.connect("activate", self.on_simular_10_dias_item_activate)
+        menu.append(simular_10_dias)
+        
+        menu.show_all()
+        menu_button.set_popup(menu)
+
+        # Creditos 
+        self.about_dialog = Gtk.AboutDialog()
+        self.about_dialog.set_program_name("Simulacion enfermedad")
+        self.about_dialog.set_version("beta")
+        
+        self.about_dialog.set_website("https://culturacientifica.com/2020/08/24/el-modelo-sir-un-enfoque-matematico-de-la-propagacion-de-infecciones/")
+        self.about_dialog.set_authors(["Wifo"])
+        self.about_dialog.set_transient_for(self)
+
+        header_bar.pack_end(menu_button)
+        self.set_titlebar(header_bar)
+        
+        # Crea el label para mostrar información
+        self.info_label = Gtk.Label()
+        self.add(self.info_label)
+    
+    def on_about_item_activate(self, item):
+      self.about_dialog.show()
+      self.about_dialog.run()
+      self.about_dialog.hide()
+
+    def on_info_item_activate(self, item):
+      texto = ""
+      for ciudadano in ciudadanos:
+          texto += str(ciudadano) + "\n"
+      info_window = Gtk.Window(title="Información inicial de Ciudadanos")
+      info_window.set_default_size(400, 300)
+      
+      scrolled_window = Gtk.ScrolledWindow()
+      scrolled_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+      
+      text_view = Gtk.TextView()
+      text_view.set_editable(False)
+      text_view.set_wrap_mode(Gtk.WrapMode.WORD)
+      
+      scrolled_window.add(text_view)
+      
+      info_window.add(scrolled_window)
+      #imprime texto
+      text_buffer = text_view.get_buffer()
+      text_buffer.set_text(texto)
+      
+      info_window.show_all()
+    
+    def on_simular_dia_item_activate(self, item):
+      comunidad.simular_dia()
+      texto = f"Día {comunidad.dia}:\nSusceptibles: {comunidad.susceptibles}\nInfectados: {comunidad.num_infectados}\nRecuperados: {comunidad.recuperados}"
+      self.info_label.set_text(texto)
+    
+    def on_simular_10_dias_item_activate(self, item):
+      for _ in range(10):
+          comunidad.simular_dia()
+      texto = f"Día {comunidad.dia}:\nSusceptibles: {comunidad.susceptibles}\nInfectados: {comunidad.num_infectados}\nRecuperados: {comunidad.recuperados}"
+      self.info_label.set_text(texto)
+
+
+win = MyWindow()
+win.connect("destroy", Gtk.main_quit)
+win.show_all()
+Gtk.main()
