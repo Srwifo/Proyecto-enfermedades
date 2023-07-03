@@ -72,7 +72,7 @@ num_infectados = random.randint(1, 10)
 total=10000
 comunidad = Comunidad(num_ciudadanos=total, promedio_conexion_fisica=random.uniform(0, 1), enfermedad="sarampion", num_infectados=num_infectados, probabilidad_conexion_fisica=random.uniform(0, 1), tasa_recuperacion=0.1)
 ciudadanos = []
-indices_infectados = random.sample(range(1), num_infectados)
+indices_infectados = random.sample(range(10), num_infectados)
 for i in range(total):
     if i in indices_infectados:
         estado = "infectado"
